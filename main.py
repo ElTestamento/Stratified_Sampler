@@ -11,7 +11,7 @@ from sklearn.decomposition import TruncatedSVD
 from nltk.corpus import stopwords
 import gc
 
-# Definiere Stoppwörter am Anfang
+# Stoppwörter
 CUSTOM_STOP_WORDS = list(stopwords.words('english')) + [
     'show', 'results', 'x', 'et', 'al', 'using', 'one', 'two', 'three',
     'model', 'theory', 'non', 'system', 'systems', 'n', 'k', 'p', 'b',
@@ -22,10 +22,10 @@ CUSTOM_STOP_WORDS = list(stopwords.words('english')) + [
 ]
 
 def get_stratified_sample(file_path, sample_size=50000):
-    """Erstellt eine stratifizierte Stichprobe basierend auf Jahren"""
+    """ stratifizierte Stichprobe basierend auf Jahren"""
     print("Analysiere Jahresverteilung...")
 
-    # Lese zunächst nur das update_date Feld
+
     years_df = pd.DataFrame()
     chunk_size = 200000
 
@@ -34,16 +34,16 @@ def get_stratified_sample(file_path, sample_size=50000):
         years_chunk['year'] = pd.to_datetime(chunk['update_date']).dt.year
         years_df = pd.concat([years_df, years_chunk])
 
-    # Berechne Verteilung
+    # Verteilung
     year_dist = years_df['year'].value_counts(normalize=True)
 
-    # Berechne Anzahl der Samples pro Jahr
+    # Anzahl der Samples pro Jahr
     samples_per_year = (year_dist * sample_size).round().astype(int)
 
     print("\nGeplante Stichprobengröße pro Jahr:")
     print(samples_per_year)
 
-    # Ziehe stratifizierte Stichprobe
+    # stratifizierte Stichprobe
     sampled_data = []
 
     # Chunk-weise Verarbeitung
@@ -56,14 +56,14 @@ def get_stratified_sample(file_path, sample_size=50000):
                 year_mask = chunk_years == year
                 year_data = chunk.loc[year_mask]
                 if not year_data.empty:
-                    # Ziehe Zufallsstichprobe für dieses Jahr
+                    # Zufallsstichprobe für dieses Jahr
                     n_samples = min(samples_per_year[year], len(year_data))
                     if n_samples > 0:
                         sampled = year_data.sample(n=n_samples)
                         sampled_data.append(sampled)
                         samples_per_year[year] -= n_samples
 
-    # Kombiniere alle Samples
+    # Kombiniert alle Samples
     final_sample = pd.concat(sampled_data, ignore_index=True)
     print(f"\nEndgültige Stichprobengröße: {len(final_sample)}")
 
@@ -73,20 +73,20 @@ def clean_data(df):
     """Bereinigt den Datensatz und erstellt grundlegende Features."""
     print("\nBereinige Daten...")
 
-    # Erstelle eine Kopie des DataFrames
+    # Kopie des DataFrames
     cleaned_df = df.copy()
 
     # Entferne nicht benötigte Spalten
     columns_to_keep = ['title', 'categories', 'update_date']
     cleaned_df = cleaned_df[columns_to_keep]
 
-    # Erstelle Jahr aus update_date
+    # Jahr aus update_date
     cleaned_df.loc[:, 'year'] = pd.to_datetime(cleaned_df['update_date']).dt.year
 
-    # Erstelle Feature für Titellänge
+    # Feature für Titellänge
     cleaned_df.loc[:, 'title_length'] = cleaned_df['title'].str.len()
 
-    # Skaliere Titellänge
+    # Skalierte Titellänge
     scaler = StandardScaler()
     cleaned_df.loc[:, 'title_length_scaled'] = scaler.fit_transform(cleaned_df['title_length'].values.reshape(-1, 1))
 
@@ -123,7 +123,7 @@ def create_features(df):
     )
     tfidf_tsne = tsne.fit_transform(tfidf_svd)
 
-    # Kombiniere Features
+    # Kombinierte Features
     final_features = pd.concat([
         df[['title_length_scaled']],
         categories_df,
@@ -133,7 +133,7 @@ def create_features(df):
     return final_features, tfidf
 
 def find_optimal_k(features, max_k=8):
-    """Optimales k mittels Ellbow-Methode und Silhouette-Score."""
+    """Optimales k mittels Elbow-Methode und Silhouette-Score."""
     print("\nFühre Clustering-Analyse durch...")
 
     inertias = []
@@ -179,27 +179,26 @@ def find_optimal_k(features, max_k=8):
 
 def main():
     # Parameter
-    SAMPLE_SIZE = 500000
+    SAMPLE_SIZE = 500000#bester Kompromiss
     MAX_K = 7
 
-    # Lade stratifizierte Stichprobe
+    # stratifizierte Stichprobe
     sample_df = get_stratified_sample('data.json', SAMPLE_SIZE)
 
-    # Bereinige Daten
+    # Bereinigte Daten
     cleaned_data = clean_data(sample_df)
 
-    # Erstelle Features
+    # Erstellt Features
     features, tfidf = create_features(cleaned_data)
 
-    # Finde optimales k
+    # Optimales k
     best_k = find_optimal_k(features, MAX_K)
 
-    # Speichere Ergebnis
+    # Speicher Ergebnis
     with open('optimal_k.txt', 'w') as f:
         f.write(str(best_k))
     print(f"\nOptimales k wurde in 'optimal_k.txt' gespeichert")
     print(f"Plots wurden in 'Graphen.png' gespeichert")
-
 
 if __name__ == "__main__":
     main()

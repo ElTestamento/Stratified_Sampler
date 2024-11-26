@@ -200,5 +200,6 @@ def main():
     print(f"\nOptimales k wurde in 'optimal_k.txt' gespeichert")
     print(f"Plots wurden in 'Graphen.png' gespeichert")
 
+
 if __name__ == "__main__":
     main()
